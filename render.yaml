@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: droppoint-api
+    runtime: docker
+    plan: free
+    rootDir: api
+    healthCheckPath: /api/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: CORS_ALLOWED_ORIGIN_PATTERNS
+        value: "*"
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false

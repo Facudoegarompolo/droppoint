@@ -1,0 +1,16 @@
+.DS_Store
+
+# Java
+api/target/
+
+# Node / Expo
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/npm-debug.log*
+mobile/yarn-debug.log*
+mobile/yarn-error.log*
+
+# Env
+mobile/.env
+*.local

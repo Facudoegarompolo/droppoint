@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "DropPoint",
+    "slug": "droppoint",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "droppoint",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.droppoint.mobile"
+    },
+    "android": {
+      "package": "com.droppoint.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#f8fafc"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
