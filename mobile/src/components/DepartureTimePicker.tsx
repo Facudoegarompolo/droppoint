@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { colors, spacing } from "../theme";
@@ -28,11 +29,28 @@ function roundedNow() {
 function addMinutes(date: Date, minutes: number) {
   const next = new Date(date);
   next.setMinutes(next.getMinutes() + minutes);
-  return next;
+  return clampToNow(next);
+}
+
+function clampToNow(date: Date) {
+  const now = roundedNow();
+  return date.getTime() < now.getTime() ? now : date;
+}
+
+function keepUpcoming(date: Date) {
+  const now = roundedNow();
+  if (date.getTime() >= now.getTime()) return date;
+
+  const tomorrow = new Date(date);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow;
 }
 
 function setTimePart(date: Date, part: "hour" | "minute", rawValue: string) {
-  const numericValue = Number(rawValue.replace(/\D/g, ""));
+  const digits = rawValue.replace(/\D/g, "");
+  if (!digits) return date;
+
+  const numericValue = Number(digits);
   const next = new Date(date);
   const limit = part === "hour" ? 23 : 59;
   const safeValue = Number.isFinite(numericValue) ? Math.max(0, Math.min(limit, numericValue)) : 0;
@@ -44,7 +62,7 @@ function setTimePart(date: Date, part: "hour" | "minute", rawValue: string) {
   }
 
   next.setSeconds(0, 0);
-  return next;
+  return keepUpcoming(next);
 }
 
 function pad(part: number) {
@@ -52,6 +70,54 @@ function pad(part: number) {
 }
 
 export function DepartureTimePicker({ value, onChange }: DepartureTimePickerProps) {
+  const [hourText, setHourText] = useState(pad(value.getHours()));
+  const [minuteText, setMinuteText] = useState(pad(value.getMinutes()));
+  const [editingPart, setEditingPart] = useState<"hour" | "minute" | null>(null);
+
+  const syncTextFromDate = (date: Date) => {
+    setHourText(pad(date.getHours()));
+    setMinuteText(pad(date.getMinutes()));
+  };
+
+  useEffect(() => {
+    if (!editingPart) {
+      syncTextFromDate(value);
+    }
+  }, [editingPart, value]);
+
+  const changeByMinutes = (minutes: number) => {
+    const next = addMinutes(value, minutes);
+    setEditingPart(null);
+    syncTextFromDate(next);
+    onChange(next);
+  };
+
+  const changeToNow = () => {
+    const next = roundedNow();
+    setEditingPart(null);
+    syncTextFromDate(next);
+    onChange(next);
+  };
+
+  const changeManualText = (part: "hour" | "minute", text: string) => {
+    const digits = text.replace(/\D/g, "").slice(0, 2);
+    const setter = part === "hour" ? setHourText : setMinuteText;
+    setter(digits);
+
+    if (digits.length === 2) {
+      const next = setTimePart(value, part, digits);
+      syncTextFromDate(next);
+      onChange(next);
+    }
+  };
+
+  const commitManualText = (part: "hour" | "minute", text: string) => {
+    const next = setTimePart(value, part, text);
+    setEditingPart(null);
+    syncTextFromDate(next);
+    onChange(next);
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Horario de salida</Text>
@@ -64,7 +130,7 @@ export function DepartureTimePicker({ value, onChange }: DepartureTimePickerProp
             <Text style={styles.time}>{timeFormatter.format(value)}</Text>
             <Text style={styles.date}>{dateFormatter.format(value)}</Text>
           </View>
-          <Pressable accessibilityRole="button" onPress={() => onChange(roundedNow())} style={styles.nowButton}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Usar hora actual" onPress={changeToNow} style={styles.nowButton}>
             <Text style={styles.nowText}>Ahora</Text>
           </Pressable>
         </View>
@@ -74,20 +140,26 @@ export function DepartureTimePicker({ value, onChange }: DepartureTimePickerProp
           <View style={styles.manualInputs}>
             <TextInput
               accessibilityLabel="Hora"
-              value={pad(value.getHours())}
-              onChangeText={(text) => onChange(setTimePart(value, "hour", text))}
+              value={hourText}
+              onChangeText={(text) => changeManualText("hour", text)}
+              onFocus={() => setEditingPart("hour")}
+              onBlur={() => commitManualText("hour", hourText)}
               keyboardType="number-pad"
               maxLength={2}
+              placeholder="HH"
               selectTextOnFocus
               style={styles.timeInput}
             />
             <Text style={styles.separator}>:</Text>
             <TextInput
               accessibilityLabel="Minutos"
-              value={pad(value.getMinutes())}
-              onChangeText={(text) => onChange(setTimePart(value, "minute", text))}
+              value={minuteText}
+              onChangeText={(text) => changeManualText("minute", text)}
+              onFocus={() => setEditingPart("minute")}
+              onBlur={() => commitManualText("minute", minuteText)}
               keyboardType="number-pad"
               maxLength={2}
+              placeholder="MM"
               selectTextOnFocus
               style={styles.timeInput}
             />
@@ -95,27 +167,14 @@ export function DepartureTimePicker({ value, onChange }: DepartureTimePickerProp
         </View>
 
         <View style={styles.stepper}>
-          <Pressable accessibilityRole="button" onPress={() => onChange(addMinutes(value, -15))} style={styles.stepButton}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Restar 15 minutos" onPress={() => changeByMinutes(-15)} style={styles.stepButton}>
             <Ionicons name="remove" size={18} color={colors.primary} />
             <Text style={styles.stepText}>15 min</Text>
           </Pressable>
-          <Pressable accessibilityRole="button" onPress={() => onChange(addMinutes(value, 15))} style={styles.stepButton}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Sumar 15 minutos" onPress={() => changeByMinutes(15)} style={styles.stepButton}>
             <Ionicons name="add" size={18} color={colors.primary} />
             <Text style={styles.stepText}>15 min</Text>
           </Pressable>
-        </View>
-
-        <View style={styles.quickRow}>
-          {[15, 30, 60].map((minutes) => (
-            <Pressable
-              key={minutes}
-              accessibilityRole="button"
-              onPress={() => onChange(addMinutes(roundedNow(), minutes))}
-              style={styles.quickButton}
-            >
-              <Text style={styles.quickText}>+{minutes} min</Text>
-            </Pressable>
-          ))}
         </View>
       </View>
     </View>
@@ -244,22 +303,5 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 13,
     fontWeight: "800"
-  },
-  quickRow: {
-    flexDirection: "row",
-    gap: spacing.sm
-  },
-  quickButton: {
-    alignItems: "center",
-    backgroundColor: "#f1f5f9",
-    borderRadius: 8,
-    flex: 1,
-    minHeight: 38,
-    justifyContent: "center"
-  },
-  quickText: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: "700"
   }
 });

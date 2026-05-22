@@ -55,6 +55,28 @@ class DropoffOptimizationServiceTest {
     }
 
     @Test
+    void keepsPassengerInCarWhenBothDestinationsAreNorthwest() {
+        DropoffOptimizationService service = new DropoffOptimizationService(new MockRouteProvider());
+
+        var response = service.optimize(new DropoffOptimizationRequest(
+                "UADE, Lima 775, CABA",
+                "San Miguel, Buenos Aires",
+                "Bella Vista, Buenos Aires",
+                LocalDateTime.parse("2026-05-16T18:00:00"),
+                new UserPreferences(10, 12, Priority.BALANCED)
+        ));
+
+        assertThat(response.options()).isNotEmpty();
+        assertThat(response.options().get(0).title()).contains("Bella Vista");
+        assertThat(response.options().get(0).driverExtraMinutes()).isLessThanOrEqualTo(3);
+        assertThat(response.options().get(0).passengerTotalMinutes()).isLessThanOrEqualTo(10);
+        assertThat(response.options().get(0).routeFitComment()).contains("comparten casi todo");
+        assertThat(response.options())
+                .extracting(option -> (option.title() + " " + option.dropoffAddress()).toLowerCase())
+                .noneMatch(text -> text.contains("palermo") || text.contains("retiro") || text.contains("chacarita"));
+    }
+
+    @Test
     void returnsNoOptionsWhenTransitCoverageIsUnavailable() {
         DropoffOptimizationService service = new DropoffOptimizationService(new MockRouteProvider());
 

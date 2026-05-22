@@ -15,7 +15,12 @@ public class MockRouteProvider implements RouteProvider {
     @Override
     public List<RouteCandidate> findDropoffCandidates(DropoffOptimizationRequest request) {
         String driverDestination = normalize(request.driverDestination());
+        String passengerDestination = normalize(request.passengerDestination());
         String fullRoute = normalize(String.join(" ", request.origin(), request.driverDestination(), request.passengerDestination()));
+
+        if (isNorthwestCorridor(driverDestination) && isNorthwestCorridor(passengerDestination)) {
+            return sharedNorthwestDestinationCandidates(request);
+        }
 
         if (isNorthwestCorridor(driverDestination)) {
             return northwestCorridorCandidates(request);
@@ -30,6 +35,97 @@ public class MockRouteProvider implements RouteProvider {
         }
 
         return centralBuenosAiresCandidates(request);
+    }
+
+    private List<RouteCandidate> sharedNorthwestDestinationCandidates(DropoffOptimizationRequest request) {
+        String target = destinationLabel(request.passengerDestination());
+        String passengerDestination = normalize(request.passengerDestination());
+
+        if (containsAny(passengerDestination, "bella vista")) {
+            return List.of(
+                    candidate(
+                            "Bajarse cerca de Bella Vista",
+                            "Estación Bella Vista, San Miguel, Buenos Aires",
+                            -34.5631,
+                            -58.6908,
+                            2,
+                            5,
+                            3,
+                            0,
+                            100,
+                            "Conductor y pasajero comparten casi todo el recorrido; la bajada queda en el tramo final hacia Bella Vista.",
+                            "Bajar en Bella Vista y completar el último tramo caminando o con un viaje local corto hacia " + target + "."
+                    ),
+                    candidate(
+                            "Bajarse en San Miguel centro",
+                            "Av. Presidente Perón y Balbín, San Miguel, Buenos Aires",
+                            -34.5412,
+                            -58.7146,
+                            1,
+                            12,
+                            6,
+                            0,
+                            94,
+                            "Aprovecha casi todo el viaje compartido y deja al pasajero a pocos minutos de Bella Vista.",
+                            "Desde San Miguel centro, seguir en colectivo local, tren corto o auto de apoyo hacia " + target + "."
+                    ),
+                    candidate(
+                            "Bajarse en Muñiz",
+                            "Estación Muñiz, San Miguel, Buenos Aires",
+                            -34.5553,
+                            -58.7058,
+                            2,
+                            9,
+                            5,
+                            0,
+                            95,
+                            "Es un punto intermedio del tramo final San Miguel/Bella Vista, sin cortar el viaje antes de tiempo.",
+                            "Bajar en Muñiz y continuar un tramo local corto hacia " + target + "."
+                    )
+            );
+        }
+
+        return List.of(
+                candidate(
+                        "Bajarse en San Miguel centro",
+                        "Av. Presidente Perón y Balbín, San Miguel, Buenos Aires",
+                        -34.5412,
+                        -58.7146,
+                        1,
+                        6,
+                        4,
+                        0,
+                        98,
+                        "Conductor y pasajero comparten casi todo el recorrido; la bajada queda en el tramo final de San Miguel.",
+                        "Bajar en San Miguel centro y completar el último tramo caminando o con un viaje local corto hacia " + target + "."
+                ),
+                candidate(
+                        "Bajarse en Muñiz",
+                        "Estación Muñiz, San Miguel, Buenos Aires",
+                        -34.5553,
+                        -58.7058,
+                        2,
+                        10,
+                        5,
+                        0,
+                        95,
+                        "Mantiene al pasajero dentro del mismo corredor final, sin bajarlo en CABA.",
+                        "Desde Muñiz, continuar en tren corto, colectivo local o caminata según el punto exacto de " + target + "."
+                ),
+                candidate(
+                        "Bajarse cerca de Bella Vista",
+                        "Estación Bella Vista, San Miguel, Buenos Aires",
+                        -34.5631,
+                        -58.6908,
+                        4,
+                        14,
+                        7,
+                        0,
+                        91,
+                        "Tiene sentido solo si el punto exacto queda más cerca de Bella Vista que de San Miguel centro.",
+                        "Bajar en Bella Vista y volver por conexión local si el destino final queda hacia San Miguel."
+                )
+        );
     }
 
     private List<RouteCandidate> northwestCorridorCandidates(DropoffOptimizationRequest request) {
