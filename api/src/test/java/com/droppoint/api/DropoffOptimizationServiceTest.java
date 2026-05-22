@@ -34,4 +34,40 @@ class DropoffOptimizationServiceTest {
         assertThat(response.options())
                 .isSortedAccordingTo((left, right) -> Integer.compare(right.score(), left.score()));
     }
+
+    @Test
+    void avoidsPalermoWhenDriverRouteGoesToSanMiguelOrBellaVista() {
+        DropoffOptimizationService service = new DropoffOptimizationService(new MockRouteProvider());
+
+        var response = service.optimize(new DropoffOptimizationRequest(
+                "UADE, Lima 775, CABA",
+                "San Miguel / Bella Vista, Buenos Aires",
+                "Caballito, CABA",
+                LocalDateTime.parse("2026-05-16T18:00:00"),
+                new UserPreferences(10, 12, Priority.BALANCED)
+        ));
+
+        assertThat(response.options()).isNotEmpty();
+        assertThat(response.options())
+                .extracting(option -> (option.title() + " " + option.dropoffAddress()).toLowerCase())
+                .noneMatch(text -> text.contains("palermo"));
+        assertThat(response.options().get(0).routeFitComment()).contains("noroeste");
+    }
+
+    @Test
+    void returnsNoOptionsWhenTransitCoverageIsUnavailable() {
+        DropoffOptimizationService service = new DropoffOptimizationService(new MockRouteProvider());
+
+        var response = service.optimize(new DropoffOptimizationRequest(
+                "UADE, Lima 775, CABA",
+                "San Miguel, Buenos Aires",
+                "Bella Vista, Buenos Aires",
+                LocalDateTime.parse("2026-05-16T02:30:00"),
+                new UserPreferences(10, 12, Priority.BALANCED)
+        ));
+
+        assertThat(response.options()).isEmpty();
+        assertThat(response.message()).contains("No hay opciones confiables");
+        assertThat(response.availabilityWarning()).contains("05:00").contains("23:30");
+    }
 }

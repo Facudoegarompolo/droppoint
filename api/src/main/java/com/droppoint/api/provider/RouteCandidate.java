@@ -9,6 +9,8 @@ public record RouteCandidate(
         int passengerTotalMinutes,
         int passengerWalkMinutes,
         int passengerTransfers,
+        int routeFitScore,
+        String routeFitComment,
         String transitRecommendation
 ) {
 }

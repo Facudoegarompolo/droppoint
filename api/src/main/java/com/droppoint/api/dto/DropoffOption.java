@@ -10,6 +10,9 @@ public record DropoffOption(
         int passengerWalkMinutes,
         int passengerTransfers,
         int score,
+        String scoreLabel,
+        String scoreBreakdown,
+        String routeFitComment,
         String transitRecommendation,
         String explanation
 ) {

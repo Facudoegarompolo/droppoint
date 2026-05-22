@@ -53,7 +53,10 @@ class DropoffOptimizationControllerTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.options.length()", greaterThan(0)))
+                .andExpect(jsonPath("$.message").isString())
                 .andExpect(jsonPath("$.options[0].score", lessThanOrEqualTo(100)))
+                .andExpect(jsonPath("$.options[0].scoreLabel").isString())
+                .andExpect(jsonPath("$.options[0].scoreBreakdown").isString())
                 .andExpect(jsonPath("$.options[0].title").isString())
                 .andExpect(jsonPath("$.options[0].dropoffAddress").isString());
     }
