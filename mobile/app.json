@@ -21,6 +21,18 @@
     },
     "web": {
       "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "68b8f5ce-4484-4ad4-8122-ff23d3e7b0b3"
+      }
+    },
+    "owner": "fackundop",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/68b8f5ce-4484-4ad4-8122-ff23d3e7b0b3"
     }
   }
 }

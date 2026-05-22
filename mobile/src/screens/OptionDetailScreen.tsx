@@ -48,10 +48,10 @@ export function OptionDetailScreen({ route }: Props) {
 
       <View style={styles.scoreBand}>
         <View>
-          <Text style={styles.scoreLabel}>Score DropPoint</Text>
+          <Text style={styles.scoreLabel}>Score DropPoint{option.scoreLabel ? ` · ${option.scoreLabel}` : ""}</Text>
           <Text style={styles.scoreValue}>{option.score}/100</Text>
         </View>
-        <Text style={styles.scoreText}>{option.explanation}</Text>
+        <Text style={styles.scoreText}>{option.scoreBreakdown ?? option.explanation}</Text>
       </View>
 
       <View style={styles.metrics}>
@@ -71,7 +71,7 @@ export function OptionDetailScreen({ route }: Props) {
         <Text style={styles.body}>
           El conductor pasa por este punto con un desvío estimado de {option.driverExtraMinutes} minutos.
           Desde ahí, el pasajero continúa hacia {request.passengerDestination} con una caminata aproximada de{" "}
-          {option.passengerWalkMinutes} minutos.
+          {option.passengerWalkMinutes} minutos. {option.routeFitComment ?? ""}
         </Text>
       </View>
 

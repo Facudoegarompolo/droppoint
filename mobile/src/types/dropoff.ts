@@ -24,10 +24,15 @@ export type DropoffOption = {
   passengerWalkMinutes: number;
   passengerTransfers: number;
   score: number;
+  scoreLabel?: string;
+  scoreBreakdown?: string;
+  routeFitComment?: string;
   transitRecommendation: string;
   explanation: string;
 };
 
 export type DropoffOptimizationResponse = {
   options: DropoffOption[];
+  message?: string;
+  availabilityWarning?: string | null;
 };

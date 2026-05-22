@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DropoffOptimizationServiceTest {
 
     @Test
-    void returnsSortedOptionsThatRespectPreferences() {
+    void returnsBalancedOptionsWithoutHardLimitFiltering() {
         DropoffOptimizationService service = new DropoffOptimizationService(new MockRouteProvider());
 
         var response = service.optimize(new DropoffOptimizationRequest(
@@ -22,17 +22,31 @@ class DropoffOptimizationServiceTest {
                 "Recoleta, CABA",
                 "Caballito, CABA",
                 LocalDateTime.parse("2026-05-16T18:00:00"),
-                new UserPreferences(10, 8, Priority.BALANCED)
+                new UserPreferences(1, 1, Priority.BALANCED)
         ));
 
         assertThat(response.options()).isNotEmpty();
         assertThat(response.options())
-                .allSatisfy(option -> {
-                    assertThat(option.driverExtraMinutes()).isLessThanOrEqualTo(10);
-                    assertThat(option.passengerWalkMinutes()).isLessThanOrEqualTo(8);
-                });
+                .anySatisfy(option -> assertThat(option.passengerWalkMinutes()).isGreaterThan(1));
         assertThat(response.options())
                 .isSortedAccordingTo((left, right) -> Integer.compare(right.score(), left.score()));
+    }
+
+    @Test
+    void driverDetourPrioritySortsBySmallestDriverImpactFirst() {
+        DropoffOptimizationService service = new DropoffOptimizationService(new MockRouteProvider());
+
+        var response = service.optimize(new DropoffOptimizationRequest(
+                "UADE, Lima 775, CABA",
+                "San Miguel, Buenos Aires",
+                "Caballito, CABA",
+                LocalDateTime.parse("2026-05-16T18:00:00"),
+                new UserPreferences(1, 1, Priority.DRIVER_DETOUR)
+        ));
+
+        assertThat(response.options()).isNotEmpty();
+        assertThat(response.options())
+                .isSortedAccordingTo((left, right) -> Integer.compare(left.driverExtraMinutes(), right.driverExtraMinutes()));
     }
 
     @Test

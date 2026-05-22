@@ -199,14 +199,40 @@ npx eas build:run -p android --latest
 
 Para iPhone sin pagar Apple Developer, la opción realista es Expo Go.
 
+Hay dos formas:
+
+- Durante desarrollo: `npx expo start --tunnel --clear`. Requiere tu computadora encendida.
+- Para que quede disponible sin tu computadora: publicar un update con EAS Update. Expo aloja el bundle JS y tus amigos lo abren con Expo Go.
+
+### iOS sin tener tu computadora prendida
+
 Pasos:
+
+```bash
+cd mobile
+npx eas login
+npx eas init
+npm run update:preview -- --message "Demo DropPoint"
+```
+
+Después:
+
+1. Entrá al dashboard de Expo.
+2. Abrí el proyecto.
+3. Buscá el update en el canal `preview`.
+4. Compartí el QR o link de preview.
+5. Tus amigos instalan Expo Go y abren ese QR/link.
+
+Con este flujo, tu computadora no tiene que estar prendida. El backend queda en Render y el front queda alojado como update de Expo.
+
+### iOS con tu computadora prendida
 
 ```bash
 cd mobile
 npx expo start --tunnel --clear
 ```
 
-Tus amigos instalan Expo Go desde App Store y escanean el QR.
+Tus amigos instalan Expo Go desde App Store y escanean el QR del dev server.
 
 Ventajas:
 
@@ -218,6 +244,7 @@ Ventajas:
 Limitaciones:
 
 - Tu computadora debe seguir corriendo el servidor de Expo.
+- Si usás EAS Update, la computadora no queda corriendo, pero necesitás compartir el QR/link del update.
 - Expo Go no es una app instalada con tu ícono final.
 - No sirve si agregás librerías nativas no incluidas en Expo Go.
 - El SDK del proyecto debe ser compatible con la versión instalada de Expo Go.

@@ -4,7 +4,6 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollVie
 
 import { optimizeDropoff } from "../api/dropoff";
 import { DepartureTimePicker, toLocalDateTime } from "../components/DepartureTimePicker";
-import { FormField } from "../components/FormField";
 import { LocationField } from "../components/LocationField";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { RootStackParamList } from "../navigation/types";
@@ -13,7 +12,9 @@ import { DropoffOptimizationRequest, Priority } from "../types/dropoff";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
-type FormErrors = Partial<Record<"origin" | "driverDestination" | "passengerDestination" | "maxDriverDetourMinutes" | "maxPassengerWalkMinutes", string>>;
+type FormErrors = Partial<Record<"origin" | "driverDestination" | "passengerDestination", string>>;
+
+const SOFT_LIMIT_MINUTES = 999;
 
 const priorityOptions: Array<{ label: string; value: Priority }> = [
   { label: "Equilibrado", value: "BALANCED" },
@@ -28,12 +29,10 @@ function defaultDepartureTime() {
 }
 
 export function HomeScreen({ navigation }: Props) {
-  const [origin, setOrigin] = useState("UADE, Lima 775, CABA");
-  const [driverDestination, setDriverDestination] = useState("Recoleta, CABA");
-  const [passengerDestination, setPassengerDestination] = useState("Caballito, CABA");
+  const [origin, setOrigin] = useState("");
+  const [driverDestination, setDriverDestination] = useState("");
+  const [passengerDestination, setPassengerDestination] = useState("");
   const [departureTime, setDepartureTime] = useState(defaultDepartureTime);
-  const [maxDriverDetourMinutes, setMaxDriverDetourMinutes] = useState("10");
-  const [maxPassengerWalkMinutes, setMaxPassengerWalkMinutes] = useState("12");
   const [priority, setPriority] = useState<Priority>("BALANCED");
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -41,14 +40,10 @@ export function HomeScreen({ navigation }: Props) {
 
   const validate = () => {
     const nextErrors: FormErrors = {};
-    const driverDetour = Number(maxDriverDetourMinutes);
-    const passengerWalk = Number(maxPassengerWalkMinutes);
 
     if (!origin.trim()) nextErrors.origin = "Ingresá el origen común.";
     if (!driverDestination.trim()) nextErrors.driverDestination = "Ingresá el destino del conductor.";
     if (!passengerDestination.trim()) nextErrors.passengerDestination = "Ingresá el destino del pasajero.";
-    if (!Number.isFinite(driverDetour) || driverDetour <= 0) nextErrors.maxDriverDetourMinutes = "Debe ser un número positivo.";
-    if (!Number.isFinite(passengerWalk) || passengerWalk <= 0) nextErrors.maxPassengerWalkMinutes = "Debe ser un número positivo.";
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -64,8 +59,8 @@ export function HomeScreen({ navigation }: Props) {
       passengerDestination: passengerDestination.trim(),
       departureTime: toLocalDateTime(departureTime),
       preferences: {
-        maxDriverDetourMinutes: Number(maxDriverDetourMinutes),
-        maxPassengerWalkMinutes: Number(maxPassengerWalkMinutes),
+        maxDriverDetourMinutes: SOFT_LIMIT_MINUTES,
+        maxPassengerWalkMinutes: SOFT_LIMIT_MINUTES,
         priority
       }
     };
@@ -100,47 +95,26 @@ export function HomeScreen({ navigation }: Props) {
             value={origin}
             onChangeText={setOrigin}
             error={errors.origin}
-            placeholder="Ej: UADE, Rosario, Av. Colón 500..."
+            placeholder="Ej: UADE, Retiro, Av. Corrientes 800..."
           />
           <LocationField
             label="Destino del conductor"
             value={driverDestination}
             onChangeText={setDriverDestination}
             error={errors.driverDestination}
-            placeholder="Ej: Recoleta, Córdoba, San Isidro..."
+            placeholder="Ej: San Miguel, Bella Vista, San Isidro..."
           />
           <LocationField
             label="Destino del pasajero"
             value={passengerDestination}
             onChangeText={setPassengerDestination}
             error={errors.passengerDestination}
-            placeholder="Ej: Caballito, Mendoza, La Plata..."
+            placeholder="Ej: Caballito, Villa Urquiza, La Plata..."
           />
           <DepartureTimePicker
             value={departureTime}
             onChange={setDepartureTime}
           />
-
-          <View style={styles.row}>
-            <FormField
-              label="Desvío máx."
-              value={maxDriverDetourMinutes}
-              onChangeText={setMaxDriverDetourMinutes}
-              keyboardType="number-pad"
-              error={errors.maxDriverDetourMinutes}
-              helper="Minutos extra que aceptás sumarle al viaje del conductor."
-              containerStyle={styles.numericField}
-            />
-            <FormField
-              label="Caminata máx."
-              value={maxPassengerWalkMinutes}
-              onChangeText={setMaxPassengerWalkMinutes}
-              keyboardType="number-pad"
-              error={errors.maxPassengerWalkMinutes}
-              helper="Minutos caminando desde el punto de bajada hasta el transporte o destino."
-              containerStyle={styles.numericField}
-            />
-          </View>
 
           <View style={styles.priorityGroup}>
             <Text style={styles.priorityLabel}>Prioridad</Text>
@@ -203,14 +177,6 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: spacing.lg
-  },
-  row: {
-    flexDirection: "row",
-    gap: spacing.md
-  },
-  numericField: {
-    flex: 1,
-    minWidth: 0
   },
   priorityGroup: {
     gap: spacing.sm

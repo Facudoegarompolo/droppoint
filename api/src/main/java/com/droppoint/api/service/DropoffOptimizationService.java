@@ -4,7 +4,6 @@ import com.droppoint.api.dto.DropoffOption;
 import com.droppoint.api.dto.DropoffOptimizationRequest;
 import com.droppoint.api.dto.DropoffOptimizationResponse;
 import com.droppoint.api.dto.Priority;
-import com.droppoint.api.dto.UserPreferences;
 import com.droppoint.api.provider.RouteCandidate;
 import com.droppoint.api.provider.RouteProvider;
 import org.springframework.stereotype.Service;
@@ -36,19 +35,17 @@ public class DropoffOptimizationService {
             );
         }
 
-        UserPreferences preferences = request.preferences();
+        Priority priority = request.preferences().priority();
 
         List<DropoffOption> options = routeProvider.findDropoffCandidates(request).stream()
-                .filter(candidate -> candidate.driverExtraMinutes() <= preferences.maxDriverDetourMinutes())
-                .filter(candidate -> candidate.passengerWalkMinutes() <= preferences.maxPassengerWalkMinutes())
-                .map(candidate -> toOption(candidate, preferences.priority()))
-                .sorted(Comparator.comparingInt(DropoffOption::score).reversed())
+                .map(candidate -> toOption(candidate, priority))
+                .sorted(optionComparator(priority))
                 .limit(MAX_OPTIONS)
                 .toList();
 
         String message = options.isEmpty()
-                ? "No encontramos opciones dentro de esos límites de desvío y caminata."
-                : "Ordenamos las opciones por desvío, continuidad del pasajero y encaje con la ruta del conductor.";
+                ? "No encontramos opciones para ese trayecto y horario."
+                : buildResponseMessage(priority);
 
         return new DropoffOptimizationResponse(options, message, null);
     }
@@ -73,6 +70,34 @@ public class DropoffOptimizationService {
                 candidate.transitRecommendation(),
                 buildExplanation(candidate, priority, scoreLabel)
         );
+    }
+
+    private Comparator<DropoffOption> optionComparator(Priority priority) {
+        return switch (priority) {
+            case DRIVER_DETOUR -> Comparator
+                    .comparingInt(DropoffOption::driverExtraMinutes)
+                    .thenComparingInt(DropoffOption::passengerWalkMinutes)
+                    .thenComparingInt(DropoffOption::passengerTotalMinutes)
+                    .thenComparing(Comparator.comparingInt(DropoffOption::score).reversed());
+            case PASSENGER_TIME -> Comparator
+                    .comparingInt(DropoffOption::passengerTotalMinutes)
+                    .thenComparingInt(DropoffOption::passengerWalkMinutes)
+                    .thenComparingInt(DropoffOption::driverExtraMinutes)
+                    .thenComparing(Comparator.comparingInt(DropoffOption::score).reversed());
+            case BALANCED -> Comparator
+                    .comparingInt(DropoffOption::score)
+                    .reversed()
+                    .thenComparingInt(DropoffOption::driverExtraMinutes)
+                    .thenComparingInt(DropoffOption::passengerWalkMinutes);
+        };
+    }
+
+    private String buildResponseMessage(Priority priority) {
+        return switch (priority) {
+            case DRIVER_DETOUR -> "Ordenamos priorizando el menor desvío del conductor y, entre opciones parecidas, menor caminata y tiempo del pasajero.";
+            case PASSENGER_TIME -> "Ordenamos priorizando el menor tiempo del pasajero y, entre opciones parecidas, menor caminata y desvío.";
+            case BALANCED -> "Ordenamos equilibrando desvío del conductor, tiempo del pasajero, caminata y encaje con la ruta.";
+        };
     }
 
     private int calculateScore(RouteCandidate candidate, Priority priority) {

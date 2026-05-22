@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { findGeorefSuggestions } from "../api/georef";
 import { findLocationSuggestions } from "../data/locationSuggestions";
+import { LocationSuggestion } from "../data/locationSuggestions";
 import { colors, spacing } from "../theme";
 
 type LocationFieldProps = {
@@ -15,8 +17,38 @@ type LocationFieldProps = {
 
 export function LocationField({ label, value, onChangeText, error, placeholder }: LocationFieldProps) {
   const [focused, setFocused] = useState(false);
-  const options = useMemo(() => findLocationSuggestions(value), [value]);
+  const [remoteOptions, setRemoteOptions] = useState<LocationSuggestion[]>([]);
+  const [searching, setSearching] = useState(false);
+  const localOptions = useMemo(() => findLocationSuggestions(value), [value]);
+  const options = useMemo(() => mergeSuggestions(remoteOptions, localOptions), [remoteOptions, localOptions]);
   const showOptions = focused && options.length > 0;
+
+  useEffect(() => {
+    const trimmedValue = value.trim();
+    if (!focused || trimmedValue.length < 3) {
+      setRemoteOptions([]);
+      setSearching(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      setSearching(true);
+      findGeorefSuggestions(trimmedValue, controller.signal)
+        .then(setRemoteOptions)
+        .catch((error: unknown) => {
+          if (!(error instanceof Error && error.name === "AbortError")) {
+            setRemoteOptions([]);
+          }
+        })
+        .finally(() => setSearching(false));
+    }, 320);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timeout);
+    };
+  }, [focused, value]);
 
   return (
     <View style={styles.container}>
@@ -36,6 +68,7 @@ export function LocationField({ label, value, onChangeText, error, placeholder }
       </View>
       {showOptions ? (
         <View style={styles.options}>
+          {searching ? <Text style={styles.searching}>Buscando direcciones en Buenos Aires...</Text> : null}
           {options.map((option) => (
             <Pressable
               key={option.value}
@@ -60,6 +93,16 @@ export function LocationField({ label, value, onChangeText, error, placeholder }
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
+}
+
+function mergeSuggestions(primary: LocationSuggestion[], secondary: LocationSuggestion[]) {
+  const seen = new Set<string>();
+  return [...primary, ...secondary].filter((suggestion) => {
+    const key = suggestion.value.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 6);
 }
 
 const styles = StyleSheet.create({
@@ -99,6 +142,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     overflow: "hidden"
+  },
+  searching: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: "700",
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm
   },
   option: {
     alignItems: "center",

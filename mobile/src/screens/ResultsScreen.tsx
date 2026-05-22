@@ -25,7 +25,7 @@ export function ResultsScreen({ route, navigation }: Props) {
         </View>
         <View style={styles.score}>
           <Text style={styles.scoreValue}>{item.score}</Text>
-          <Text style={styles.scoreLabel}>score</Text>
+          <Text style={styles.scoreLabel}>{item.scoreLabel ?? "score"}</Text>
         </View>
       </View>
 
@@ -36,6 +36,7 @@ export function ResultsScreen({ route, navigation }: Props) {
       </View>
 
       <View style={styles.footer}>
+        {item.scoreBreakdown ? <Text style={styles.scoreBreakdown}>{item.scoreBreakdown}</Text> : null}
         <View style={styles.recommendation}>
           <Ionicons name="train" size={17} color={colors.primary} />
           <Text style={styles.recommendationText}>{item.transitRecommendation}</Text>
@@ -61,14 +62,22 @@ export function ResultsScreen({ route, navigation }: Props) {
             <Text style={styles.kicker}>{request.origin}</Text>
             <Text style={styles.heading}>Elegí dónde conviene bajar</Text>
             <Text style={styles.subtitle}>
-              Ordenamos las opciones según tu prioridad y los límites de desvío y caminata.
+              {response.message ?? "Ordenamos las opciones según tu prioridad, el recorrido compartido y la continuidad del pasajero."}
             </Text>
+            {response.availabilityWarning ? (
+              <View style={styles.warning}>
+                <Ionicons name="alert-circle" size={18} color={colors.accent} />
+                <Text style={styles.warningText}>{response.availabilityWarning}</Text>
+              </View>
+            ) : null}
           </View>
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No encontramos opciones dentro de esos límites.</Text>
-            <Text style={styles.emptyText}>Probá ampliar el desvío del conductor o la caminata máxima.</Text>
+            <Text style={styles.emptyTitle}>No encontramos opciones para mostrar.</Text>
+            <Text style={styles.emptyText}>
+              {response.availabilityWarning ?? response.message ?? "Probá ampliar el desvío del conductor o la caminata máxima."}
+            </Text>
           </View>
         }
       />
@@ -139,7 +148,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     borderRadius: 8,
     borderWidth: 1,
-    minWidth: 54,
+    minWidth: 66,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs
   },
@@ -150,7 +159,9 @@ const styles = StyleSheet.create({
   },
   scoreLabel: {
     color: colors.muted,
-    fontSize: 11
+    fontSize: 10,
+    fontWeight: "800",
+    textAlign: "center"
   },
   metrics: {
     flexDirection: "row",
@@ -159,6 +170,11 @@ const styles = StyleSheet.create({
   },
   footer: {
     gap: spacing.sm
+  },
+  scoreBreakdown: {
+    color: colors.text,
+    fontSize: 13,
+    lineHeight: 19
   },
   recommendation: {
     alignItems: "flex-start",
@@ -207,5 +223,21 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 14,
     lineHeight: 20
+  },
+  warning: {
+    alignItems: "flex-start",
+    backgroundColor: "#fff8e1",
+    borderColor: "#ffe08a",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.md
+  },
+  warningText: {
+    color: colors.text,
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 19
   }
 });
